@@ -13,7 +13,15 @@
  * @uses TogglAPI
  */
 
+/**
+ * $startTime
+ * Time program started execution so we can track the time spent.
+ */
+$startTime = microtime(true);
+
 displayStatus("========== TogglSync ==========");
+displayStatus("Running at " . Date('Y-m-d H:i:s'));
+displayStatus("================================");
 
 //Includes
 displayStatus("Loading configuration & Toggl SDK");
@@ -40,6 +48,7 @@ Toggl::setKey($TOGGL_KEY);
 /*
  * Get a list of projects in our workspace
  */
+displayStatus("Getting workspace projects from Toggl");
 $projects = TogglWorkspace::getWorkspaceProjects($TOGGL_WORKSPACE);
 
 /*
@@ -89,6 +98,23 @@ foreach ($projects as $Project) {
         die($e);
     }
 }
+
+
+/**
+ * $endTime
+ * Mark when the program finished so we can show the time elapsed
+ */
+$endTime = microtime(true);
+
+/**
+ * $elapsedTime
+ * Total time spent executing the program
+ */
+$elapsedTime = ($endTime - $startTime);
+
+//Show the elapsed time.
+displayStatus("Program executed in " . $elapsedTime . " seconds.");
+
 
 /*
 function getWorkspaceProjects() {
