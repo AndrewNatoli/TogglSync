@@ -26,6 +26,7 @@ require_once("inc/Toggl/Toggl.php");
 try {
     displayStatus("Establishing database connection");
     $db = new PDO('mysql:host='.$DB_HOST.';dbname='.$DB_NAME.';charset=utf8', ''.$DB_USER.'', ''.$DB_PASS.'');
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 }
 catch(PDOException $e) {
     displayStatus("Could not establish a connection to the database.");
@@ -48,15 +49,14 @@ $projects = TogglWorkspace::getWorkspaceProjects($TOGGL_WORKSPACE);
 foreach ($projects as $Project) {
     try {
         //See if we've already added this project...
-        $stmt = $db->prepare("SELECT * FROM ? WHERE pid=?");
-        $stmt->execute(array($TBL_PROJECTS,$Project['id']));
+        $stmt = $db->prepare("SELECT * FROM ".$TBL_PROJECTS." WHERE pid=?");
+        $stmt->execute(array($Project['id']));
 
         //If we haven't added the project, add it!
         if($stmt->rowCount() == 0) {
             try {
-                $stmt = $db->prepare("INSERT INTO :thetable (pid,wid,cid,name,actual_hours) VALUES(:pid,:wid,:cid,:projectname,:actual_hours");
-                $stmt->execute(array(   ':thetable'     => $TBL_PROJECTS,
-                                        ':pid'          => $Project['id'],
+                $stmt = $db->prepare("INSERT INTO ".$TBL_PROJECTS." (pid,wid,cid,name,actual_hours) VALUES(:pid,:wid,:cid,:projectname,:actual_hours)");
+                $stmt->execute(array(   ':pid'          => $Project['id'],
                                         ':wid'          => $Project['wid'],
                                         ':cid'          => $Project['cid'],
                                         ':projectname'  => $Project['name'],
@@ -66,23 +66,27 @@ foreach ($projects as $Project) {
             }
             catch (PDOException $e2) {
                 displayStatus("Error creating project record. Project ID: " . $Project['id']);
+                die($e2);
             }
         }
         //Update the project's actual_hours count
         else {
             try {
-                $stmt = $db->prepare("UPDATE :table SET actual_hours=:actual_hours WHERE pid=:pid");
-                $stmt->execute(array (  ':table'    => $TBL_PROJECTS,
-                                        ':pid'      => $Project['id']
+                $stmt = $db->prepare("UPDATE ".$TBL_PROJECTS." SET actual_hours=:actual_hours WHERE pid=:pid");
+                $stmt->execute(array (  'actual_hours'  => $Project['actual_hours'],
+                                        ':pid'          => $Project['id']
                 ));
+                displayStatus("Updated project " . $Project['id']);
             }
             catch (PDOException $e) {
-                displayStatus("Updated project " . $Project['id']);
+                displayStatus("Could not update project " . $Project['id']);
+                die($e);
             }
         }
     }
     catch(PDOException $e) {
         displayStatus("Error looking for project " . $Project['id'] . " in database.");
+        die($e);
     }
 }
 
@@ -123,12 +127,25 @@ function timeToDecimal($time) {
 }
 
 /**
+ * getCid
+ * Becuase some projects might not be bound to a client, we need to give some kind of value.
+ * @param $Project The project we cant to get the cid of
+ * @return int
+ */
+function getCid($Project) {
+    if(empty($Project['cid']) || $Project['cid'] == "")
+        return -1;
+    else
+        return $Project['cid'];
+}
+
+/**
  * displayStatus
  * Prints the status of the program as it's executing.
  * @param $message String
  */
 function displayStatus($message) {
-    echo $message . "<br/>";
+    echo $message . "\n";
     flush();
 }
 
