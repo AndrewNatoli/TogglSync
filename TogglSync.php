@@ -19,14 +19,15 @@
  */
 $startTime = microtime(true);
 
+//Includes
+require_once("inc/config.php");
+require_once("inc/functions.php");
+require_once("inc/Toggl/Toggl.php");
+
+displayStatus("Loaded configuration & SDK");
 displayStatus("========== TogglSync ==========");
 displayStatus("Running at " . Date('Y-m-d H:i:s'));
 displayStatus("===============================");
-
-//Includes
-displayStatus("Loading configuration & Toggl SDK");
-require_once("inc/config.php");
-require_once("inc/Toggl/Toggl.php");
 
 /*
  * Establish a connection to the database
@@ -156,66 +157,3 @@ $elapsedTime = ($endTime - $startTime);
 //Show the elapsed time.
 displayStatus("Program finished in " . $elapsedTime . " seconds.");
 displayStatus("===========================================");
-
-
-/*
-function getWorkspaceProjects() {
-    return TogglWorkspace::getWorkspaceProjects($this->workspace_id);
-}
-*/
-
-//TogglReport::detailed(array("user_agent"=>$TOGGL_USER,"workspace_id"=>$TOGGL_WORKSPACE));
-//TogglProject::getProjectData($project_id);
-
-/*
-function calculateTime($start,$finish) {
-    $duration = $finish-$start;
-    return $this->timeToDecimal(date("H:i:s",$duration));
-}
-*/
-
-/**
- * Convert time into decimal time.
- *
- * @param string $time The time to convert
- *
- * @return integer The time as a decimal value.
- */
-function timeToDecimal($time) {
-    $timeArr = explode(':', $time);
-    $decTime = ($timeArr[0]*60) + ($timeArr[1]) + ($timeArr[2]/60);
-    return $decTime;
-}
-
-/**
- * getCid
- * Becuase some projects might not be bound to a client, we need to give some kind of value.
- * @param $Project The project we cant to get the cid of
- * @return int
- */
-function getCid($Project) {
-    if(empty($Project['cid']) || $Project['cid'] == "")
-        return -1;
-    else
-        return $Project['cid'];
-}
-
-/**
- * displayStatus
- * Prints the status of the program as it's executing.
- * @param $message String
- */
-function displayStatus($message) {
-    echo $message . "\n";
-    flush();
-}
-
-/**
- * printAndHalt
- * Used for debugging. Print the contents of a variable and kill the program.
- * @param $var
- */
-function printAndHalt($var) {
-    echo "<pre>";
-    die(print_r($var));
-}
