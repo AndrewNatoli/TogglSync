@@ -21,7 +21,7 @@ $startTime = microtime(true);
 
 displayStatus("========== TogglSync ==========");
 displayStatus("Running at " . Date('Y-m-d H:i:s'));
-displayStatus("================================");
+displayStatus("===============================");
 
 //Includes
 displayStatus("Loading configuration & Toggl SDK");
@@ -92,6 +92,47 @@ foreach ($projects as $Project) {
                 die($e);
             }
         }
+        /*
+         * Get the time logs for this project
+         * Toggl only allows us to fetch a year's worth of records at a time (which is part of why I wrote this program)
+         */
+        displayStatus("Getting time records for project " . $Project['id']);
+        $untilDate = date("Y-m-d");
+        $sinceDate = date("Y-m-d",strtotime("-1 year",time()));
+        $timeLogs= TogglReport::detailed(array("user_agent"=>$TOGGL_USER,"workspace_id"=>$TOGGL_WORKSPACE,"project_ids"=>$Project['id'],"since"=>$sinceDate,"until"=>$untilDate));
+        foreach ($timeLogs['data'] as $TimeLog) {
+            //See if the record exists in the database
+            //TODO: Get the most recent TimeLog first, check if that's in the database. More efficient than checking EVERY log.
+            try {
+                $stmt = $db->prepare("SELECT * FROM ".$TBL_TIMELOGS." WHERE id=?");
+                $stmt->execute(array($TimeLog['id']));
+                //If the record isn't in the database, add it!
+                if($stmt->rowCount() == 0) {
+                    try {
+                        $stmt = $db->prepare("INSERT INTO ".$TBL_TIMELOGS." (id,pid,description,start,end,dur,client,project) VALUES(:id,:pid,:description,:start,:end,:dur,:client,:project)");
+                        $stmt->execute(array(   ':id'           => $TimeLog['id'],
+                                                ':pid'          => $TimeLog['pid'],
+                                                ':description'  => $TimeLog['description'],
+                                                ':start'        => $TimeLog['start'],
+                                                ':end'          => $TimeLog['end'],
+                                                ':dur'          => $TimeLog['dur'],
+                                                ':client'       => $TimeLog['client'],
+                                                ':project'      => $TimeLog['project']
+                        ));
+                        displayStatus("Added time record " . $TimeLog['id']);
+                    }
+                    catch(PDOException $e) {
+                        displayStatus("Couldn't insert time record " . $TimeLog['id']);
+                        die($e);
+                    }
+                }
+            }
+            catch(PDOException $e) {
+                displayStatus("Couldn't check for existing time record (" + $TimeLog['id'] + ")");
+                die($e);
+            }
+        }
+
     }
     catch(PDOException $e) {
         displayStatus("Error looking for project " . $Project['id'] . " in database.");
@@ -113,7 +154,8 @@ $endTime = microtime(true);
 $elapsedTime = ($endTime - $startTime);
 
 //Show the elapsed time.
-displayStatus("Program executed in " . $elapsedTime . " seconds.");
+displayStatus("Program finished in " . $elapsedTime . " seconds.");
+displayStatus("===========================================");
 
 
 /*
@@ -126,13 +168,6 @@ function getWorkspaceProjects() {
 //TogglProject::getProjectData($project_id);
 
 /*
-function getProjectTimelog($toggl_projectID,$sinceDate="",$untilDate="") {
-    if($untilDate == "") $untilDate = date("Y-m-d");
-    if($sinceDate == "") $sinceDate = date("Y-m-d",strtotime("-1 year",time()));
-
-    return TogglReport::detailed(array("user_agent"=>$this->user_agent,"workspace_id"=>$this->workspace_id,"project_ids"=>$toggl_projectID,"since"=>$sinceDate,"until"=>$untilDate));
-}
-
 function calculateTime($start,$finish) {
     $duration = $finish-$start;
     return $this->timeToDecimal(date("H:i:s",$duration));
