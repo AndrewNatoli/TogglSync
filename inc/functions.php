@@ -14,10 +14,10 @@
 * @return int
 */
 function getCid($Project) {
-if(empty($Project['cid']) || $Project['cid'] == "")
-return -1;
-else
-return $Project['cid'];
+    if(empty($Project['cid']) || $Project['cid'] == "")
+        return -1;
+    else
+        return $Project['cid'];
 }
 
 /**
@@ -26,8 +26,8 @@ return $Project['cid'];
 * @param $message String
 */
 function displayStatus($message) {
-echo $message . "\n";
-flush();
+    echo $message . "\n";
+    flush();
 }
 
 /**
@@ -36,6 +36,6 @@ flush();
 * @param $var
 */
 function printAndHalt($var) {
-echo "<pre>";
+    echo "<pre>";
     die(print_r($var));
 }
